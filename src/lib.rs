@@ -4,9 +4,11 @@ use anyhow::Result;
 use clap::Parser;
 use rss::Channel;
 use time::OffsetDateTime;
-use utils::strip_tags;
+use utils::{read_url, strip_tags};
 
 mod utils;
+
+const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.142.86 Safari/537.36";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -32,8 +34,6 @@ pub fn get_args() -> Args {
 }
 
 pub fn run(args: Args) -> Result<()> {
-    // let args = Args::parse();
-
     let print = |(index, item): (usize, &Item)| {
         println!("{:>3}: ({}) {}", index + 1, item.pub_date, item.title);
         if let Some(desc) = &item.description {
@@ -43,10 +43,23 @@ pub fn run(args: Args) -> Result<()> {
         println!();
     };
 
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(USER_AGENT)
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .expect("failed to create client");
     let mut items = Vec::new();
     for url in args.urls {
-        let data = utils::read_url(&url).expect("failed to read URL");
-        items.extend(parse_rss(BufReader::new(&data[..]))?);
+        let next_items =
+            read_url(&client, &url).and_then(|data| parse_rss(BufReader::new(&data[..])));
+        match next_items {
+            Ok(next_items) => {
+                items.extend(next_items);
+            }
+            Err(err) => {
+                eprintln!("failed to read {}: {}", url, err);
+            }
+        }
     }
 
     items.sort_by(|a, b| b.pub_date.cmp(&a.pub_date));
@@ -69,7 +82,7 @@ fn parse_rss<R: BufRead>(reader: R) -> Result<Vec<Item>> {
         .map(|item| Item {
             title: item.title().unwrap().to_string(),
             link: item.link().unwrap().to_string(),
-            description: item.description().map(|d| strip_tags(d)),
+            description: item.description().map(strip_tags),
             pub_date: OffsetDateTime::parse(
                 item.pub_date().unwrap(),
                 &time::format_description::well_known::Rfc2822,

@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 
-pub fn read_url(url: &str) -> Result<Vec<u8>> {
-    let response = reqwest::blocking::get(url)?;
+pub fn read_url(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>> {
+    let response = client.get(url).send()?;
     if !response.status().is_success() {
         bail!("failed to read {}: {:?}", url, response.status());
     }
