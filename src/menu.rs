@@ -22,7 +22,7 @@ impl Menu {
             button("Read Latest News"),
             button("Read Single Feed"),
             button("Edit Feeds"),
-            button("Quit (q)"),
+            back_button("Quit (q)"),
         ]);
 
         loop {
@@ -61,6 +61,7 @@ impl Menu {
                 button("Add Feed..."),
             ];
 
+            let first_feed_index = menu_items.len();
             for (index, feed) in feeds.iter().enumerate() {
                 menu_items.push(button(format!("{}: {}", index + 1, feed.title)));
             }
@@ -81,24 +82,29 @@ impl Menu {
 
             if selected == "Add Feed..." {
                 self.add_feed();
+                continue;
             }
+
+            let index = mut_menu.selected_item_index() - first_feed_index;
+            let feed = &feeds[index];
+            self.edit_feed(feed);
         }
     }
 
     fn add_feed(&mut self) {
-        loop {
-            let menu = menu(vec![
-                label("Add Feed"),
-                label(""),
-                //
-                string("Title", "", false),
-                string("URL", "", false),
-                label(""),
-                //
-                button("Add"),
-                button("Cancel"),
-            ]);
+        let menu = menu(vec![
+            label("Add Feed"),
+            label(""),
+            //
+            string("Title", "", false),
+            string("URL", "", false),
+            label(""),
+            //
+            button("Add"),
+            back_button("Cancel"),
+        ]);
 
+        loop {
             run(&menu);
 
             let mut_menu = mut_menu(&menu);
@@ -118,6 +124,29 @@ impl Menu {
 
             self.db.add_feed(feed);
             break;
+        }
+    }
+
+    fn edit_feed(&mut self, feed: &Feed) {
+        let menu = menu(vec![
+            label("Edit Feed"),
+            label(""),
+            //
+            label("Title: ".to_owned() + feed.title.as_str()),
+            label("URL: ".to_owned() + feed.url.as_str()),
+            label(""),
+            //
+            scroll("Remove", vec!["No", "Yes"]),
+            back_button("Done"),
+        ]);
+
+        run(&menu);
+
+        let mut_menu = mut_menu(&menu);
+        let selected = mut_menu.selected_item_name();
+
+        if mut_menu.selection_value("Remove") == "Yes" {
+            self.db.remove_feed(feed.url.as_str());
         }
     }
 }
