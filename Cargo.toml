@@ -11,7 +11,9 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.4", features = ["derive"] }
+polodb_core = "4.4"
 regex = "1.10"
 reqwest = { version = "0.11.23", features = ["blocking", "gzip", "brotli", "deflate"] }
 rss = "2.0"
+terminal-menu = "3.0"
 time = { version = "0.3.31", features = ["parsing", "formatting", "local-offset"] }

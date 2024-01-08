@@ -6,6 +6,8 @@ use rss::Channel;
 use time::OffsetDateTime;
 use utils::{read_url, strip_tags};
 
+mod db;
+mod menu;
 mod utils;
 
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.142.86 Safari/537.36";
@@ -18,7 +20,6 @@ pub struct Args {
     count: Option<usize>,
 
     /// URLs to read
-    #[arg(required = true)]
     urls: Vec<String>,
 }
 
@@ -34,6 +35,11 @@ pub fn get_args() -> Args {
 }
 
 pub fn run(args: Args) -> Result<()> {
+    if args.urls.is_empty() {
+        let db = db::DB::new();
+        return menu::Menu::new(db).run();
+    }
+
     let print = |(index, item): (usize, &Item)| {
         println!("{:>3}: ({}) {}", index + 1, item.pub_date, item.title);
         if let Some(desc) = &item.description {
